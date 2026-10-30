@@ -140,11 +140,25 @@ To move to a newer Nightly:
    missing function: find its new path in that commit and fix `target` in the manifest.
 
 Then `python3 tools/package.py` writes `target/<id>-<version>.hnmod`: `horizon-native.json` plus your
-`mixins/<id>/` sources, byte-for-byte reproducible. Submit it to
-[horizon-mods](https://github.com/horizon-rust/horizon-mods) as a `native-mod`. A maintainer reads the
-source before it is listed, and the Horizon launcher compiles it with its own Rust on the pinned commit, in
-an instance of its own. The mod id must be lowercase letters, digits and `_` (the registry's rule), and
-the bundle folder is named after it.
+`mixins/<id>/` sources, byte-for-byte reproducible. The mod id must be lowercase letters, digits and `_` (the
+registry's rule), and the bundle folder is named after it.
+
+## List it once, then release by tagging
+
+1. **List the project once** at [playhorizon.dev/mods/submit](https://playhorizon.dev/mods/submit) (or a pull request
+   to [horizon-mods](https://github.com/horizon-rust/horizon-mods)): your repository's address, kind `native-mod`,
+   and the page. A maintainer reads your repository and its source; that is the review.
+2. **Release a version**: set `version` in `mixins/<id>/horizon-mixin.toml`, then push a tag with the same number.
+   [`.github/workflows/release.yml`](.github/workflows/release.yml) runs `tools/package.py` and publishes a GitHub
+   release holding the `.hnmod`. (By hand: publish a release yourself with `target/<id>-<version>.hnmod` as its
+   asset; exactly one `.hnmod` per release, not a draft or a pre-release.)
+3. Within the hour the registry downloads the asset, checks it as it checks a submission (it reads the source, it
+   builds and runs nothing), and lists the version. **There is no pull request and no reviewer for a release:** later
+   releases are checked automatically, not read by a person, and `revoked.toml` takes a bad one down. If a check fails
+   the release is skipped and an issue in horizon-mods says why. The version, the game and the pins are the ones in
+   your `.hnmod`; the changelog is the release's notes.
+
+The Horizon launcher compiles the mod with its own Rust on the pinned commit, in an instance of its own.
 
 ## Validation
 
