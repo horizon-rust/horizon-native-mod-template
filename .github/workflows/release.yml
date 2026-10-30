@@ -1,0 +1,26 @@
+# Push a tag (v1.2.3) whose number is the version in mixins/<id>/horizon-mixin.toml: this packages the
+# .hnmod and publishes a GitHub release with it. The Horizon registry reads that release (no pull request).
+name: Release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 tools/package.py
+      - name: The tag is the version
+        run: |
+          file="$(ls target/*.hnmod)"
+          version="${file##*-}"; version="${version%.hnmod}"
+          [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "::error::tag $GITHUB_REF_NAME, but the mod's version is $version"; exit 1; }
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" target/*.hnmod --title "$GITHUB_REF_NAME" --generate-notes
