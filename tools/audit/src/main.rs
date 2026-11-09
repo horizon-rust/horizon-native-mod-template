@@ -79,8 +79,11 @@ fn main() {
         );
     }
     for (file, tree) in trees {
+        // horizon-mixins writes the staged file through prettyplease, and one pass of it can
+        // change the tree (a long closure body gains braces): print the original once too.
         let original =
             syn::parse_file(&fs::read_to_string(Path::new(&args[1]).join(file)).unwrap()).unwrap();
+        let original = syn::parse_file(&prettyplease::unparse(&original)).unwrap();
         assert!(
             prettyplease::unparse(&original) == prettyplease::unparse(&tree),
             "unexpected source change in {file}"
