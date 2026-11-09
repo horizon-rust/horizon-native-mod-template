@@ -24,8 +24,8 @@ cargo test --workspace --locked --offline
 
 The exact compatible revisions are in [compatibility.json](compatibility.json):
 
-- Horizon: `ba6344a59cb9e755b730dcf02285fc0d33b97d3c` (Nightly 2026-10-30).
-- Horizon Mixins: `d9c83d7` (0.6.0, plan schema 6).
+- Horizon: `fdc87aecdbd116bf1e08adcd062fcbaea8c2e2ca` (Nightly 2026-11-08).
+- Horizon Mixins: `e8cd0aa` (0.6.0, plan schema 6), the revision Horizon's official native mods use.
 
 Clone the tools beside your mod if you do not already have suitable checkouts:
 
@@ -128,8 +128,8 @@ Compilation tests do not establish interactive gameplay/resource compatibility.
 
 A native mod builds on one exact Horizon commit, and every mod of a player's build must pin the same one, so
 pin a **Nightly**: its release notes name the commit, and the tag `nightly-source/<date>-<short>` keeps that
-commit's source downloadable after the Nightly is replaced. This template pins Nightly 2026-10-30
-(`ba6344a`). The launcher also builds every mod of a build with one horizon-mixins revision, the one
+commit's source downloadable after the Nightly is replaced. This template pins Nightly 2026-11-08
+(`fdc87ae`). The launcher also builds every mod of a build with one horizon-mixins revision, the one
 they all name (`horizon_mixins_revision`), so keep it the same as the other mods your players combine yours with.
 To move to a newer Nightly:
 
