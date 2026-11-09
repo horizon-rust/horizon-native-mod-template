@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -118,8 +119,10 @@ def main():
         report = {"stage": str(output), "stage_changed": changed,
                   "horizon_revision": PIN, "staging_seconds": time.monotonic()-started}
         if args.action != "stage":
+            # The game module is part of horizon-client's library: its tests run there.
+            unit = ["--lib"] if args.action == "test" else ["--bin", "horizon-client"]
             command = ["cargo", args.action, "--locked", "--offline", "-p", "horizon-client",
-                       "--bin", "horizon-client", "--no-default-features", "--target-dir", str(target)]
+                       *unit, "--no-default-features", "--target-dir", str(target)]
             if args.action == "build":
                 command.extend(["--profile", "fast"])
             if args.action == "test":
@@ -132,6 +135,9 @@ def main():
             log = ROOT / "target" / f"horizon-{args.action}.log"
             log.write_text(result.stdout + result.stderr)
             report["cargo_log"] = str(log)
+            if not result.returncode and args.action == "test" and not re.search(r"test result: ok\. [1-9]", result.stdout):
+                print("the test filter matched no test: check the module path", file=sys.stderr)
+                result.returncode = 1
             if result.returncode:
                 print(result.stderr[-12000:], file=sys.stderr)
                 print(json.dumps(report), file=sys.stderr)

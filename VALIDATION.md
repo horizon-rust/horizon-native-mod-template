@@ -11,7 +11,7 @@ Validated on Linux with Rust 1.95.0 on 2026-10-30, using the exact revisions in
 | `python3 tools/test_template.py` | Actual bundle compiles in the tiny fixture; original method calls/result, shared runtime, AST audit, unchanged bytes/mtimes and incompatible revision/target rejection pass |
 | `python3 tools/test_stage.py` | Complete pinned Horizon export stages deterministically; original checkout unchanged; exact HEAD/module audit passes |
 | `python3 tools/horizon.py check` | Actual `horizon-client` binary checks successfully with `--no-default-features` |
-| `python3 tools/horizon.py test` | The runtime's embedded test passes inside the actual Horizon game test binary |
+| `python3 tools/horizon.py test` | The runtime's embedded test passes inside the actual Horizon library test target (1 test run) |
 
 The native check reported 69.55 seconds in Cargo, and the native test passed.
 Both reused an existing external Cargo target directory with cached
