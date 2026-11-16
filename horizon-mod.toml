@@ -1,0 +1,11 @@
+id = "example_mod"
+name = "Stone Signal"
+version = "0.1.0"
+description = "Stone becomes a constant-strength comparator signal source."
+authors = []
+api = "0.2"
+side = "both"
+capabilities = ["registries"]
+
+# Bootstrap obtains the exact [native] pins from a published, verified SDK.
+# python3 tools/horizon.py bootstrap (or --horizon <published build>)

@@ -2,14 +2,9 @@
 name = "horizon-example-mod"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.95"
 license = "MIT"
-description = "A minimal native Horizon Mixins mod"
+description = "A hook and BlockPart example for the prebuilt Horizon SDK"
 
-[lib]
-# This exact source is also injected as a same-crate module by horizon-mixins.
-path = "mixins/example_mod/runtime.rs"
-
-[workspace]
-members = ["tools/audit"]
-resolver = "2"
+[dependencies]
+# Fetched and verified by cargo horizon-mod; never a game checkout or crates.io.
+horizon-mod-api = { path = ".horizon/sdk/api/crates/horizon-mod-api" }

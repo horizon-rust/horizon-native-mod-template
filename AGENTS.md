@@ -1,15 +1,15 @@
 # Working on a native Horizon mod
 
-Read README.md and compatibility.json before editing. Keep this repository
-separate from Horizon and horizon-mixins. Only export committed pinned Horizon
-sources into ignored target trees; never modify the original checkout or player
-resources. Do not commit binaries, exported sources or Minecraft assets.
+Read README.md and horizon-mod.toml before editing. Build against the exact
+published SDK, never by staging or recompiling the game. Keep this repository
+separate from Horizon and horizon-mixins; do not commit downloaded SDKs,
+binaries, generated wasm projects or Minecraft assets.
 
-The Cargo library and injected runtime module share runtime.rs. Keep helper
-functions small and gameplay logic testable there. All AST changes go through
-horizon-mixins plan/apply; do not add string-based Rust source rewriting.
+src/lib.rs is the native and wasm implementation. Prefer typed Hooks, Host
+handles and Parts. Use [[native.mixin]] only when the API cannot express the
+behavior; such projects are native-only and require an exact build.
 
-Validate with cargo fmt, clippy with warnings denied, cargo test and
-python3 tools/test_template.py. For bundle/compatibility changes also run
-python3 tools/test_stage.py and python3 tools/horizon.py check/test against the
-pinned source export. Keep validation claims and supported revisions honest.
+Run python3 tools/test_template.py for the lightweight tooling checks.
+SDK compilation, package validation, native linking and gameplay checks are
+separate: follow README.md and record only checks actually run in VALIDATION.md.
+Never claim a candidate SDK is published before bootstrap downloads it normally.
