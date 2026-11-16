@@ -1,26 +1,108 @@
-name: Native mod template
+name: SDK mod template
 on:
   push:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      horizon:
+        description: Published exact SDK build (empty keeps the committed pin)
+        type: string
+      game_version:
+        description: Published game tag matching that SDK (for native linking)
+        required: true
+        type: string
+      launcher_tag:
+        description: Published launcher release tag supporting that SDK
+        required: true
+        type: string
 permissions:
   contents: read
 jobs:
-  fixture:
+  tooling:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install pinned Rust
-        run: rustup toolchain install 1.95.0 --profile minimal --component rustfmt --component clippy
-      - name: Check out pinned mixin transformer
-        run: |
-          git clone https://github.com/horizon-rust/horizon-mixins ../horizon-mixins
-          git -C ../horizon-mixins checkout "$(python3 -c 'import json; print(json.load(open("compatibility.json"))["horizon_mixins_revision"])')"
-          cargo fetch --locked --manifest-path ../horizon-mixins/Cargo.toml
-      - run: cargo fetch --locked
-      - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets --locked --offline -- -D warnings
-      - run: cargo test --workspace --locked --offline
       - run: python3 tools/test_template.py
+
+  sdk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install the published mod tool
+        run: |
+          cargo install --locked cargo-binstall
+          cargo binstall --no-confirm --git https://github.com/horizon-rust/horizon cargo-horizon-mod
+      - name: Download and verify the pinned SDK
+        env:
+          SDK_BUILD: ${{ inputs.horizon }}
+        run: |
+          if [ -n "$SDK_BUILD" ]; then
+            python3 tools/horizon.py bootstrap --horizon "$SDK_BUILD"
+          else
+            python3 tools/horizon.py bootstrap
+          fi
+      - name: Compile against the real SDK for host and wasm
+        run: cargo horizon-mod check --uses
+      - name: Package and validate native sources
+        run: |
+          cargo horizon-mod build
+          cargo horizon-mod check target/horizon-mod/example_mod.hmod --json
+      - name: Compile and validate the same sources as wasm
+        run: python3 tools/horizon.py wasm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: template-packages
+          path: target/horizon-mod/*.hmod
+          if-no-files-found: error
+
+  native:
+    if: github.event_name == 'workflow_dispatch'
+    needs: sdk
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NO_SELF_UPDATE: '1'
+      NO_AUDIO: '1'
+    steps:
+      - name: Isolate launcher and game data
+        run: |
+          echo "HORIZON_HOME=$RUNNER_TEMP/template-game-home" >> "$GITHUB_ENV"
+          echo "HORIZON_LAUNCHER_HOME=$RUNNER_TEMP/template-launcher-home" >> "$GITHUB_ENV"
+          echo "HORIZON_LAUNCHER_LOCATION_FILE=$RUNNER_TEMP/template-location.json" >> "$GITHUB_ENV"
+          echo "XDG_DATA_HOME=$RUNNER_TEMP/template-xdg-data" >> "$GITHUB_ENV"
+          echo "XDG_CONFIG_HOME=$RUNNER_TEMP/template-xdg-config" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          name: template-packages
+          path: packages
+      - name: Download a normal published launcher
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LAUNCHER_TAG: ${{ inputs.launcher_tag }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/template-tools"
+          cd "$RUNNER_TEMP/template-tools"
+          gh release download "$LAUNCHER_TAG" --repo horizon-rust/horizon \
+            --pattern horizon-launcher-linux-x86_64.tar.gz --pattern SHA256SUMS
+          sha256sum --check --ignore-missing SHA256SUMS
+          tar -xzf horizon-launcher-linux-x86_64.tar.gz
+          echo "$RUNNER_TEMP/template-tools" >> "$GITHUB_PATH"
+      - name: Link native sources against normal prebuilt SDK downloads
+        env:
+          GAME_VERSION: ${{ inputs.game_version }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/template-native"
+          cd "$RUNNER_TEMP/template-native"
+          python3 -m zipfile -e "$GITHUB_WORKSPACE/packages/example_mod.hmod" mod
+          horizon-launcher install "$GAME_VERSION"
+          horizon-launcher instance create "Template CI"
+          horizon-launcher native-build "$PWD/mod" --instance "Template CI" \
+            --version "$GAME_VERSION" --trust-native-code

@@ -1,30 +1,49 @@
 # Validation
 
-Validated on Linux with Rust 1.95.0 on 2026-10-30, using the exact revisions in
-`compatibility.json` and the real bundle committed here.
+The SDK cutover replaces the old source-staging fixture and its unrelated
+full-game compilation claims. Those checks do not establish compatibility
+with the current API and are no longer this template's validation.
 
-| Check | Result |
-|---|---|
-| `cargo fmt --all --check` | Pass |
-| `cargo clippy --workspace --all-targets --locked --offline -- -D warnings` | Pass |
-| `cargo test --workspace --locked --offline` | Runtime unit test passes |
-| `python3 tools/test_template.py` | Actual bundle compiles in the tiny fixture; original method calls/result, shared runtime, AST audit, unchanged bytes/mtimes and incompatible revision/target rejection pass |
-| `python3 tools/test_stage.py` | Complete pinned Horizon export stages deterministically; original checkout unchanged; exact HEAD/module audit passes |
-| `python3 tools/horizon.py check` | Actual `horizon-client` binary checks successfully with `--no-default-features` |
-| `python3 tools/horizon.py test` | The runtime's embedded test passes inside the actual Horizon game test binary |
+## Lightweight tooling
 
-The native check reported 69.55 seconds in Cargo, and the native test passed.
-Both reused an existing external Cargo target directory with cached
-Horizon dependencies. These are compilation/test checks, not a fresh-build
-benchmark. Staging the full export took about 24 seconds per command on this
-machine; a repeated application preserved the stage.
+`python3 tools/test_template.py` checks exact-pin syntax, TOML table conversion,
+native-extension refusal, byte-identical source/asset projection, stale-source
+removal, retained build caches and refusal to overwrite unowned directories.
+These are unit tests with explicitly synthetic TOML pins; they neither download
+an SDK nor substitute a fake SDK for compilation.
 
-No game was launched and no Minecraft resources or player data were read or
-changed. Interactive logging/gameplay remains a manual check with the compatible
-prepared resources. The source audit verifies only the declared HEAD statement
-and support module differ from pristine Rust ASTs; it does not claim compatibility
-with other Horizon revisions or arbitrary third-party mods.
+Source-cutover checks on 2026-11-16: **5 Python unit tests passed**; both Python
+tools compiled with `py_compile`; the Cargo/mod manifests, language JSON and
+workflow YAML parsed successfully. No Rust build or formatter was run in this
+isolated source task.
 
-CI reproduces the formatting, clippy, standalone runtime and tiny-fixture tests.
-The full native checks additionally need a Horizon Git history containing the
-pin and its cached dependencies; use the commands in README.md to reproduce them.
+## Published-SDK and live proofs
+
+Run these only after the exact candidate SDK is published, through ordinary
+downloads (no checkout SDK injection, game rebuild or manual wasm stdlib):
+
+```sh
+python3 tools/horizon.py bootstrap --horizon "$PUBLISHED_HORIZON_SHA"
+cargo horizon-mod check --uses
+cargo horizon-mod build
+cargo horizon-mod check target/horizon-mod/example_mod.hmod --json
+python3 tools/horizon.py wasm
+horizon-launcher native-build . --instance "Stone Signal" --version "$GAME_TAG" --trust-native-code
+horizon-launcher play --instance "Stone Signal" --world stone-signal --creative
+```
+
+The packaged native source must also build after unpacking the `.hmod`, not
+only from this developer checkout. CI's manual native job exercises that path.
+The wasm package must run in a separate unmodified instance of the same build,
+with the same mod id enabled; do not load native and wasm variants together.
+
+For both variants record: exact SDK commit, launcher/game release, host/side,
+package hashes, successful join message, stone comparator output 15 and output
+removal after breaking the stone. Keep native build logs showing SDK downloads
+and mod compilation, not game-crate compilation. The README has install/run
+instructions and the workflow has actual SDK/package/native-link jobs.
+
+No public SDK build, native link, wasm compilation or live gameplay has been
+claimed by the source-only cutover. A release pin is finalized only after
+bootstrap succeeds against its actual signed publication; that publication and
+the end-to-end canary are release gates, not simulated successes.

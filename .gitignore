@@ -1,3 +1,5 @@
 /target/
+/.horizon/
+/mod.wasm
 __pycache__/
 *.pyc
